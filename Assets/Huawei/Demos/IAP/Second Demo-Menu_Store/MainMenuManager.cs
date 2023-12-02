@@ -32,7 +32,7 @@ public class MainMenuManager : MonoBehaviour
     Text userTxt, coinTxt;
     void Start()
     {
-        Screen.orientation = ScreenOrientation.Landscape;
+        Screen.orientation = ScreenOrientation.LandscapeLeft;
 
         playBtn = GameObject.Find("Play").GetComponent<Button>();
         storeBtn = GameObject.Find("Store").GetComponent<Button>();

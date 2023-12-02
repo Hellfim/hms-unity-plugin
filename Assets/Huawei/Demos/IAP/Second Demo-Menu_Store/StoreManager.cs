@@ -17,7 +17,7 @@ public class StoreManager : MonoBehaviour
     
     void Start() 
     {
-        Screen.orientation = ScreenOrientation.Landscape;
+        Screen.orientation = ScreenOrientation.LandscapeLeft;
         //Text fields
         userTxt.text = "Hello, "+HMSAccountKitManager.Instance.HuaweiId.DisplayName;
         coinTxt.text = PlayerPrefs.GetInt("Coin",0).ToString();
