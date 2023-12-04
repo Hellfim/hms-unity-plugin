@@ -1,4 +1,5 @@
-﻿using System.Collections.ObjectModel;
+﻿using System;
+using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using HuaweiMobileServices.IAP;
 using HuaweiMobileServices.Utils;
@@ -12,145 +13,177 @@ namespace HmsPlugin
 {
     public class HuaweiStore : IStore
     {
-        static HuaweiStore currentInstance;
+        private static HuaweiStore _currentInstance;
 
-        public static string PurchaseTokenOfLastPurchase = null;
+        public static String PurchaseTokenOfLastPurchase = null;
 
         public static HuaweiStore GetInstance()
         {
-            if (currentInstance != null) return currentInstance;
-            currentInstance = new HuaweiStore();
-            return currentInstance;
+            if (_currentInstance != null)
+            {
+                return _currentInstance;
+            }
+
+            _currentInstance = new HuaweiStore();
+            return _currentInstance;
         }
 
-        IStoreCallback storeEvents;
+        private IStoreCallback _storeEvents;
+
         void IStore.Initialize(IStoreCallback callback)
         {
-            this.storeEvents = callback;
+            _storeEvents = callback;
 
-            this.BaseInit();
-            this.CreateClient();
+            BaseInit();
+            CreateClient();
         }
 
-        object locker;
-        List<ProductInfo> productsList;
-        Dictionary<string, ProductInfo> productsByID;
-        Dictionary<string, InAppPurchaseData> purchasedData;
-        public static ProductDefinition currentProduct;
+        private System.Object _locker;
+        private List<ProductInfo> _productsList;
+        private Dictionary<String, ProductInfo> _productsByID;
+        private Dictionary<String, InAppPurchaseData> _purchasedData;
+        public static ProductDefinition CurrentProduct;
 
         public void BaseInit()
         {
-            this.locker = new object();
-            this.productsList = new List<ProductInfo>(100);
-            this.productsByID = new Dictionary<string, ProductInfo>(100);
-            this.purchasedData = new Dictionary<string, InAppPurchaseData>(50);
+            _locker = new System.Object();
+            _productsList = new List<ProductInfo>(100);
+            _productsByID = new Dictionary<String, ProductInfo>(100);
+            _purchasedData = new Dictionary<String, InAppPurchaseData>(50);
         }
 
-        private IIapClient iapClient;
+        private IIapClient _iapClient;
+
         public void CreateClient()
         {
-            this.iapClient = Iap.GetIapClient();
+            _iapClient = Iap.GetIapClient();
             Debug.Log("[HuaweiStore] IAP Client Created");
-            var moduleInitTask = iapClient.EnvReady;
+            var moduleInitTask = _iapClient.EnvReady;
 
             moduleInitTask.AddOnSuccessListener(ClientinitSuccess).AddOnFailureListener(ClientInitFailed);
         }
 
 
-        bool clientInited = false;
+        private Boolean _clientInited = false;
+
         public void ClientinitSuccess(EnvReadyResult result)
         {
             Debug.Log("[HuaweiStore] IAP Client Success");
-            lock (locker)
+            lock (_locker)
             {
-                this.clientInited = true;
-                if (initProductDefinitions != null) LoadConsumableProducts(productList);
+                _clientInited = true;
+                if (_initProductDefinitions != null)
+                {
+                    LoadConsumableProducts(ProductList);
+                }
             }
         }
 
         public void ClientInitFailed(HMSException exception)
         {
             Debug.LogError("[HuaweiStore]: ERROR on ClientInitFailed: " + exception.WrappedCauseMessage + " " + exception.WrappedExceptionMessage);
-            this.storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
+            _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
         }
 
+        private ReadOnlyCollection<ProductDefinition> _initProductDefinitions;
 
-        ReadOnlyCollection<ProductDefinition> initProductDefinitions;
         void IStore.RetrieveProducts(ReadOnlyCollection<ProductDefinition> products)
         {
-            lock (locker)
+            lock (_locker)
             {
                 Debug.Log("[HuaweiStore] IAP RetrieveProducts");
                 foreach (var item in products)
                 {
                     Debug.Log($"[HuaweiStore] Product Id: {item.id} ");
-                    productList.Add(item);
+                    ProductList.Add(item);
                 }
-                initProductDefinitions = products;
 
-                if (clientInited) LoadConsumableProducts(productList);
+                _initProductDefinitions = products;
+
+                if (_clientInited)
+                {
+                    LoadConsumableProducts(ProductList);
+                }
             }
         }
 
-        public List<ProductDefinition> productList = new List<ProductDefinition>();
+        public List<ProductDefinition> ProductList = new List<ProductDefinition>();
 
         public void LoadConsumableProducts(List<ProductDefinition> list)
         {
-            productList = list;
+            ProductList = list;
             var consumablesIDs = list.Where(c => c.type == ProductType.Consumable).Select(c => c.storeSpecificId).ToList();
             CreateProductRequest(consumablesIDs, PriceType.IN_APP_CONSUMABLE, LoadNonConsumableProducts);
-
         }
 
         public void LoadNonConsumableProducts()
         {
-            var nonConsumablesIDs = productList.Where(c => c.type == ProductType.NonConsumable).Select(c => c.storeSpecificId).ToList();
+            var nonConsumablesIDs = ProductList.Where(c => c.type == ProductType.NonConsumable).Select(c => c.storeSpecificId).ToList();
             if (nonConsumablesIDs.Count > 0)
+            {
                 CreateProductRequest(nonConsumablesIDs, PriceType.IN_APP_NONCONSUMABLE, LoadSubscribeProducts);
+            }
             else
+            {
                 LoadSubscribeProducts();
+            }
         }
 
         public void LoadSubscribeProducts()
         {
-            var subscribeIDs = productList.Where(c => c.type == ProductType.Subscription).Select(c => c.storeSpecificId).ToList();
+            var subscribeIDs = ProductList.Where(c => c.type == ProductType.Subscription).Select(c => c.storeSpecificId).ToList();
             if (subscribeIDs.Count > 0)
+            {
                 CreateProductRequest(subscribeIDs, PriceType.IN_APP_SUBSCRIPTION, ProductsLoaded);
+            }
             else
+            {
                 ProductsLoaded();
+            }
         }
 
-        public void CreateProductRequest(List<string> consumablesIDs, PriceType type, System.Action onSuccess)
+        public void CreateProductRequest(List<String> consumablesIDs, PriceType type, Action onSuccess)
         {
             var productsDataRequest = new ProductInfoReq();
             productsDataRequest.PriceType = type;
             productsDataRequest.ProductIds = consumablesIDs;
 
-            var task = iapClient.ObtainProductInfo(productsDataRequest);
+            var task = _iapClient.ObtainProductInfo(productsDataRequest);
             task.AddOnFailureListener(GetProductsFailure);
-            task.AddOnSuccessListener((result) => { ParseProducts(result, type); onSuccess(); });
+            task.AddOnSuccessListener(result =>
+            {
+                ParseProducts(result, type);
+                onSuccess();
+            });
         }
 
         public void GetProductsFailure(HMSException exception)
         {
             Debug.LogError("[HuaweiStore]: ERROR on GetProductsFailure: " + exception.WrappedCauseMessage + " " + exception.WrappedExceptionMessage);
-            this.storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
+            _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
         }
 
         public void ParseProducts(ProductInfoResult result, PriceType type)
         {
-            if (result == null) return;
-            if (result.ProductInfoList.Count == 0) return;
+            if (result == null)
+            {
+                return;
+            }
+
+            if (result.ProductInfoList.Count == 0)
+            {
+                return;
+            }
 
             foreach (var item in result.ProductInfoList)
             {
                 Debug.Log($"[HuaweiStore]  Huawei Product Id: {item.ProductId}");
             }
 
-            foreach (ProductInfo productInfo in result.ProductInfoList)
+            foreach (var productInfo in result.ProductInfoList)
             {
-                this.productsList.Add(productInfo);
-                this.productsByID.Add(productInfo.ProductId, productInfo);
+                _productsList.Add(productInfo);
+                _productsByID.Add(productInfo.ProductId, productInfo);
             }
         }
 
@@ -169,23 +202,30 @@ namespace HmsPlugin
             CreateOwnedPurchaseRequest(PriceType.IN_APP_SUBSCRIPTION, ProductsLoaded);
         }
 
-        public void CreateOwnedPurchaseRequest(PriceType type, System.Action onSuccess)
+        public void CreateOwnedPurchaseRequest(PriceType type, Action onSuccess)
         {
             var ownedPurchasesReq = new OwnedPurchasesReq();
             ownedPurchasesReq.PriceType = type;
 
-            var task = iapClient.ObtainOwnedPurchases(ownedPurchasesReq);
+            var task = _iapClient.ObtainOwnedPurchases(ownedPurchasesReq);
 
-            task.AddOnSuccessListener((result) => { ParseOwned(result); onSuccess(); });
+            task.AddOnSuccessListener(result =>
+            {
+                ParseOwned(result);
+                onSuccess();
+            });
         }
 
         public void ParseOwned(OwnedPurchasesResult result)
         {
-            if (result == null || result.InAppPurchaseDataList == null) return;
+            if (result == null || result.InAppPurchaseDataList == null)
+            {
+                return;
+            }
 
             foreach (var inAppPurchaseData in result.InAppPurchaseDataList)
             {
-                this.purchasedData[inAppPurchaseData.ProductId] = inAppPurchaseData;
+                _purchasedData[inAppPurchaseData.ProductId] = inAppPurchaseData;
 
                 Debug.Log($"ProductId: " + inAppPurchaseData.ProductId + " , ProductName: " + inAppPurchaseData.ProductName);
             }
@@ -195,139 +235,122 @@ namespace HmsPlugin
         {
             Debug.Log("ProductsLoaded");
 
-            var descList = new List<ProductDescription>(this.productsList.Count);
+            var descList = new List<ProductDescription>(_productsList.Count);
 
-            foreach (var product in this.productsList)
+            foreach (var product in _productsList)
             {
-                string priceString;
-                float price = product.MicrosPrice * 0.000001f;
+                String priceString;
+                var price = product.MicrosPrice * 0.000001f;
 
-                if (price < 100) priceString = price.ToString("0.00");
-                else priceString = ((int)(price + 0.5f)).ToString();
+                if (price < 100)
+                {
+                    priceString = price.ToString("0.00");
+                }
+                else
+                {
+                    priceString = ((Int32)(price + 0.5f)).ToString();
+                }
 
                 priceString = product.Currency + " " + priceString;
-                var prodMeta = new ProductMetadata(priceString, product.ProductName, product.ProductDesc, product.Currency, (decimal)price);
-                ProductDescription prodDesc;
+                var prodMeta = new ProductMetadata(priceString, product.ProductName, product.ProductDesc, product.Currency, (Decimal)price);
 
-                if (this.purchasedData.TryGetValue(product.ProductId, out var purchaseData))
-                {
-                    prodDesc = new ProductDescription(product.ProductId, prodMeta, CreateReceipt(purchaseData), purchaseData.OrderID);
-                }
-                else prodDesc = new ProductDescription(product.ProductId, prodMeta);
+                var prodDesc = _purchasedData.TryGetValue(product.ProductId, out var purchaseData) ? new ProductDescription(product.ProductId, prodMeta, CreateReceipt(purchaseData), purchaseData.OrderID) : new ProductDescription(product.ProductId, prodMeta);
 
                 descList.Add(prodDesc);
             }
 
-            this.storeEvents.OnProductsRetrieved(descList);
+            _storeEvents.OnProductsRetrieved(descList);
         }
 
-        public string CreateReceipt(InAppPurchaseData purchaseData)
+        public static String CreateReceipt(InAppPurchaseData purchaseData)
         {
             var sb = new StringBuilder(1024);
-
-
             sb.Append('{').Append("\"Store\":\"AppGallery\",\"TransactionID\":\"").Append(purchaseData.OrderID).Append("\", \"Payload\":{ ");
             sb.Append("\"product\":\"").Append(purchaseData.ProductId).Append("\"");
             sb.Append('}');
             sb.Append('}');
             return sb.ToString();
-
         }
 
-
-        void IStore.Purchase(ProductDefinition product, string developerPayload)
+        void IStore.Purchase(ProductDefinition product, String developerPayload)
         {
-            if (!productsByID.ContainsKey(product.storeSpecificId))
+            if (!_productsByID.ContainsKey(product.storeSpecificId))
             {
-                storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.ProductUnavailable, "UnknownProduct"));
+                _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.ProductUnavailable, "UnknownProduct"));
                 return;
             }
 
-            var productInfo = productsByID[product.storeSpecificId];
-            PurchaseIntentReq purchaseIntentReq = new PurchaseIntentReq
+            var productInfo = _productsByID[product.storeSpecificId];
+            var purchaseIntentReq = new PurchaseIntentReq
             {
                 PriceType = productInfo.PriceType,
                 ProductId = productInfo.ProductId,
                 DeveloperPayload = developerPayload
             };
 
-            var task = iapClient.CreatePurchaseIntent(purchaseIntentReq)
-                .AddOnSuccessListener((intentResult) =>
-                {
-                    PurchaseIntentCreated(intentResult, product);
-                })
-                .AddOnFailureListener((exception) =>
-                {
-                    storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message));
-                });
+            _iapClient.CreatePurchaseIntent(purchaseIntentReq)
+                      .AddOnSuccessListener(intentResult => { PurchaseIntentCreated(intentResult, product); })
+                      .AddOnFailureListener(exception => { _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message)); });
         }
-
 
         public void PurchaseIntentCreated(PurchaseIntentResult intentResult, ProductDefinition product)
         {
             if (intentResult == null)
             {
-                storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, "IntentIsNull"));
+                _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, "IntentIsNull"));
                 return;
             }
 
             var status = intentResult.Status;
-            status.StartResolutionForResult((androidIntent) =>
+            status.StartResolutionForResult(androidIntent =>
             {
-                PurchaseResultInfo purchaseResultInfo = iapClient.ParsePurchaseResultInfoFromIntent(androidIntent);
+                var purchaseResultInfo = _iapClient.ParsePurchaseResultInfoFromIntent(androidIntent);
 
                 switch (purchaseResultInfo.ReturnCode)
                 {
                     case OrderStatusCode.ORDER_STATE_SUCCESS:
-                        this.purchasedData[product.storeSpecificId] = purchaseResultInfo.InAppPurchaseData;
+                    {
+                        _purchasedData[product.storeSpecificId] = purchaseResultInfo.InAppPurchaseData;
 
                         Debug.Log($"token {purchaseResultInfo.InAppPurchaseData.PurchaseToken}");
                         PurchaseTokenOfLastPurchase = purchaseResultInfo.InAppPurchaseData.PurchaseToken;
 
-                        currentProduct = product;
-                        storeEvents.OnPurchaseSucceeded(product.storeSpecificId, purchaseResultInfo.InAppDataSignature, purchaseResultInfo.InAppPurchaseData.OrderID);
+                        CurrentProduct = product;
+                        _storeEvents.OnPurchaseSucceeded(product.storeSpecificId, purchaseResultInfo.InAppDataSignature, purchaseResultInfo.InAppPurchaseData.OrderID);
                         break;
-
+                    }
                     case OrderStatusCode.ORDER_PRODUCT_OWNED:
-                        storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.storeSpecificId, PurchaseFailureReason.DuplicateTransaction, purchaseResultInfo.ErrMsg));
+                    {
+                        _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.storeSpecificId, PurchaseFailureReason.DuplicateTransaction, purchaseResultInfo.ErrMsg));
                         break;
-
+                    }
                     case OrderStatusCode.ORDER_STATE_CANCEL:
-                        storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.storeSpecificId, PurchaseFailureReason.UserCancelled, purchaseResultInfo.ErrMsg));
+                    {
+                        _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.storeSpecificId, PurchaseFailureReason.UserCancelled, purchaseResultInfo.ErrMsg));
                         break;
-
+                    }
                     default:
-                        storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.storeSpecificId, PurchaseFailureReason.Unknown, purchaseResultInfo.ErrMsg));
+                    {
+                        _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.storeSpecificId, PurchaseFailureReason.Unknown, purchaseResultInfo.ErrMsg));
                         break;
+                    }
                 }
-            }, (exception) =>
-            {
-                storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message));
-            });
-
+            }, exception => { _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message)); });
         }
 
-
-        void IStore.FinishTransaction(ProductDefinition product, string transactionId)
+        void IStore.FinishTransaction(ProductDefinition product, String transactionId)
         {
-            if (this.purchasedData.TryGetValue(product.storeSpecificId, out var data))
+            if (_purchasedData.TryGetValue(product.storeSpecificId, out var data))
             {
                 var token = data.PurchaseToken;
                 var request = new ConsumeOwnedPurchaseReq();
                 request.PurchaseToken = token;
 
-                var task = iapClient.ConsumeOwnedPurchase(request);
-                task.AddOnSuccessListener((result) =>
-                {
-                    this.purchasedData.Remove(product.storeSpecificId);
-                });
+                var task = _iapClient.ConsumeOwnedPurchase(request);
+                task.AddOnSuccessListener(_ => { _purchasedData.Remove(product.storeSpecificId); });
 
-                task.AddOnFailureListener((exception) =>
-                {
-                    Debug.Log("Consume failed " + exception.Message + " " + exception.StackTrace);
-                });
+                task.AddOnFailureListener(exception => { Debug.Log("Consume failed " + exception.Message + " " + exception.StackTrace); });
             }
         }
-
     }
 }
