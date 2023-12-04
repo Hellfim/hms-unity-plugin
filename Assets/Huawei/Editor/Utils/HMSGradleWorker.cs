@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -227,9 +228,7 @@ namespace HmsPlugin
                 pluginEnabled = false;
             }
 
-            var isAssetPackage = UnityEditor.PackageManager.PackageInfo.FindForAssembly(System.Reflection.Assembly.GetExecutingAssembly()) == null;
-            var packageRoot = isAssetPackage ? "Assets" : "Packages/com.hellfim.hms-unity-plugin";
-            
+            var packageRoot = HMSEditorUtils.IsAssetPackage ? "Assets" : $"Packages/{HMSEditorUtils.PackageName}";
             var huaweiMobileServicesDLL = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Dlls/HuaweiMobileServices.dll") as PluginImporter;
             var appDebugAar = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/app-debug.aar") as PluginImporter;
             var bookInfo = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins//Android/BookInfo.java") as PluginImporter;

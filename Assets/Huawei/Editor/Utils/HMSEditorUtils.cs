@@ -2,8 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
@@ -11,9 +9,24 @@ namespace HmsPlugin
 {
     public static class HMSEditorUtils
     {
+        public const String PackageName = "com.hellfim.hms-unity-plugin";
+
+        public static Boolean IsAssetPackage => UnityEditor.PackageManager.PackageInfo.FindForAssembly(System.Reflection.Assembly.GetExecutingAssembly()) == null;
+
+        private static String GetLibraryPackagePath(String packageName)
+        {
+            var projectPath = Directory.GetParent(Application.dataPath)?.FullName;
+            var packagesCachePath = $"{projectPath}/Library/PackageCache";
+            var packagesLibraryPaths = Directory.GetDirectories(packagesCachePath);
+            var packageLibraryPath = packagesLibraryPaths.FirstOrDefault(path => new DirectoryInfo(path).Name.StartsWith(packageName));
+            
+            return packageLibraryPath;
+        }
+        
         public static void HandleAssemblyDefinitions(bool enable, bool refreshAssets = true)
         {
-            string huaweiMobileServicesCorePath = Application.dataPath + "/Huawei/HuaweiMobileServices.Core.asmdef";
+            var packageRootAbsolutePath = IsAssetPackage ? Application.dataPath : GetLibraryPackagePath(PackageName);
+            string huaweiMobileServicesCorePath = $"{packageRootAbsolutePath}/Huawei/HuaweiMobileServices.Core.asmdef";
             var huaweiMobileServicesCore = JsonUtility.FromJson<AssemblyDefinitionInfo>(File.ReadAllText(huaweiMobileServicesCorePath));
 
             if (huaweiMobileServicesCore != null)
