@@ -275,13 +275,9 @@ namespace HmsPlugin
 
         private static void RemoveGradleFiles()
         {
-            File.Delete(MainTemplateGradle);
-            File.Delete($"{MainTemplateGradle}.meta");
-            File.Delete(LauncherTemplateGradle);
-            File.Delete($"{LauncherTemplateGradle}.meta");
-            File.Delete(BaseProjectTemplateGradle);
-            File.Delete($"{BaseProjectTemplateGradle}.meta");
-
+            AssetDatabase.DeleteAsset(MainTemplateGradle);
+            AssetDatabase.DeleteAsset(LauncherTemplateGradle);
+            AssetDatabase.DeleteAsset(BaseProjectTemplateGradle);
             AssetDatabase.DeleteAsset("Assets/Huawei/Plugins");
         }
 
