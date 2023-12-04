@@ -227,12 +227,15 @@ namespace HmsPlugin
                 pluginEnabled = false;
             }
 
-            var huaweiMobileServicesDLL = AssetImporter.GetAtPath("Assets/Huawei/Dlls/HuaweiMobileServices.dll") as PluginImporter;
-            var appDebugAar = AssetImporter.GetAtPath("Assets/Huawei/Plugins/Android/app-debug.aar") as PluginImporter;
-            var bookInfo = AssetImporter.GetAtPath("Assets/Huawei/Plugins//Android/BookInfo.java") as PluginImporter;
-            var objectTypeInfoHelper = AssetImporter.GetAtPath("Assets/Huawei/Plugins/Android/ObjectTypeInfoHelper.java") as PluginImporter;
-            var pushKitPlugin = AssetImporter.GetAtPath("Assets/Huawei/Plugins/Android/HMSUnityPushKit.plugin") as PluginImporter;
-            var modeling3dPlugin = AssetImporter.GetAtPath("Assets/Huawei/Plugins/Android/HMSUnityModelingKit.plugin") as PluginImporter;
+            var isAssetPackage = UnityEditor.PackageManager.PackageInfo.FindForAssembly(System.Reflection.Assembly.GetExecutingAssembly()) == null;
+            var packageRoot = isAssetPackage ? "Assets" : "Packages/com.hellfim.hms-unity-plugin";
+            
+            var huaweiMobileServicesDLL = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Dlls/HuaweiMobileServices.dll") as PluginImporter;
+            var appDebugAar = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/app-debug.aar") as PluginImporter;
+            var bookInfo = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins//Android/BookInfo.java") as PluginImporter;
+            var objectTypeInfoHelper = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/ObjectTypeInfoHelper.java") as PluginImporter;
+            var pushKitPlugin = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/HMSUnityPushKit.plugin") as PluginImporter;
+            var modeling3dPlugin = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/HMSUnityModelingKit.plugin") as PluginImporter;
 
             if (pluginEnabled)
                 PrepareGradleFile();
