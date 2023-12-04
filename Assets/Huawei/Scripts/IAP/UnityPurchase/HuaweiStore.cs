@@ -91,7 +91,7 @@ namespace HmsPlugin
 
                 _iapClient.ConsumeOwnedPurchase(request)
                           .AddOnSuccessListener(_ => { _purchasedData.Remove(product.storeSpecificId); })
-                          .AddOnFailureListener(exception => { Debug.Log("Consume failed " + exception.Message + " " + exception.StackTrace); });
+                          .AddOnFailureListener(exception => { Debug.LogError("Consume failed " + exception.Message + " " + exception.StackTrace); });
             }
         }
 
