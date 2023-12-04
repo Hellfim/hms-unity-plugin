@@ -29,14 +29,11 @@ namespace HmsPlugin
         private System.Object _locker;
         private Dictionary<String, ProductInfo> _productsInfo;
         private Dictionary<String, InAppPurchaseData> _purchasedData;
+        private ReadOnlyCollection<ProductDefinition> _productDefinitions;
 
         private Boolean _isClientInitialized;
         private IIapClient _iapClient;
         private IStoreCallback _storeEvents;
-
-        private ReadOnlyCollection<ProductDefinition> _initProductDefinitions;
-
-        private List<ProductDefinition> ProductList = new List<ProductDefinition>();
         
         void IStore.Initialize(IStoreCallback callback)
         {
@@ -53,19 +50,11 @@ namespace HmsPlugin
         {
             lock (_locker)
             {
-                Debug.Log("[HuaweiStore] IAP RetrieveProducts");
-                foreach (var item in products)
-                {
-                    Debug.Log($"[HuaweiStore] Product Id: {item.id} ");
-                    ProductList.Add(item);
-                }
+                Debug.Log($"[HuaweiStore] IAP RetrievedProducts:\n{String.Join("Product Id: \n", products.Select(definition => definition.id))}");
 
-                _initProductDefinitions = products;
+                _productDefinitions = products;
 
-                if (_isClientInitialized)
-                {
-                    LoadConsumableProducts(ProductList);
-                }
+                LoadProductsInfos();
             }
         }
 
@@ -122,10 +111,8 @@ namespace HmsPlugin
             lock (_locker)
             {
                 _isClientInitialized = true;
-                if (_initProductDefinitions != null)
-                {
-                    LoadConsumableProducts(ProductList);
-                }
+                
+                LoadProductsInfos();
             }
         }
 
@@ -135,16 +122,25 @@ namespace HmsPlugin
             _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
         }
 
-        private void LoadConsumableProducts(List<ProductDefinition> list)
+        private void LoadProductsInfos()
         {
-            ProductList = list;
-            var consumablesIDs = list.Where(c => c.type == ProductType.Consumable).Select(c => c.storeSpecificId).ToList();
+            if (!_isClientInitialized || _productDefinitions == null)
+            {
+                return;
+            }
+            
+            LoadConsumableProducts();
+        }
+        
+        private void LoadConsumableProducts()
+        {
+            var consumablesIDs = _productDefinitions.Where(c => c.type == ProductType.Consumable).Select(c => c.storeSpecificId).ToList();
             CreateProductRequest(consumablesIDs, PriceType.IN_APP_CONSUMABLE, LoadNonConsumableProducts);
         }
 
         private void LoadNonConsumableProducts()
         {
-            var nonConsumablesIDs = ProductList.Where(c => c.type == ProductType.NonConsumable).Select(c => c.storeSpecificId).ToList();
+            var nonConsumablesIDs = _productDefinitions.Where(c => c.type == ProductType.NonConsumable).Select(c => c.storeSpecificId).ToList();
             if (nonConsumablesIDs.Count > 0)
             {
                 CreateProductRequest(nonConsumablesIDs, PriceType.IN_APP_NONCONSUMABLE, LoadSubscribeProducts);
@@ -157,7 +153,7 @@ namespace HmsPlugin
 
         private void LoadSubscribeProducts()
         {
-            var subscribeIDs = ProductList.Where(c => c.type == ProductType.Subscription).Select(c => c.storeSpecificId).ToList();
+            var subscribeIDs = _productDefinitions.Where(c => c.type == ProductType.Subscription).Select(c => c.storeSpecificId).ToList();
             if (subscribeIDs.Count > 0)
             {
                 CreateProductRequest(subscribeIDs, PriceType.IN_APP_SUBSCRIPTION, ProductsLoaded);
@@ -178,7 +174,7 @@ namespace HmsPlugin
 
             _iapClient.ObtainProductInfo(productsDataRequest)
                       .AddOnFailureListener(GetProductsFailure)
-                      .AddOnSuccessListener(result => { ParseProducts(result, type); onSuccess(); });
+                      .AddOnSuccessListener(result => { ProcessLoadedProductInfos(result); onSuccess(); });
         }
 
         private void GetProductsFailure(HMSException exception)
@@ -187,22 +183,14 @@ namespace HmsPlugin
             _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
         }
 
-        private void ParseProducts(ProductInfoResult result, PriceType type)
+        private void ProcessLoadedProductInfos(ProductInfoResult result)
         {
-            if (result == null)
+            if (result == null || result.ProductInfoList.Count == 0)
             {
                 return;
             }
 
-            if (result.ProductInfoList.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var item in result.ProductInfoList)
-            {
-                Debug.Log($"[HuaweiStore]  Huawei Product Id: {item.ProductId}");
-            }
+            Debug.Log($"[HuaweiStore] Loaded product infos:\n{String.Join("Product Id: \n", result.ProductInfoList.Select(productInfo => productInfo.ProductId))}");
 
             foreach (var productInfo in result.ProductInfoList)
             {
