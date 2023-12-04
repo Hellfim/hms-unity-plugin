@@ -64,7 +64,7 @@ namespace HmsPlugin
             lock (locker)
             {
                 this.clientInited = true;
-                if (initProductDefinitions != null) LoadComsumableProducts(productList);
+                if (initProductDefinitions != null) LoadConsumableProducts(productList);
             }
         }
 
@@ -88,21 +88,21 @@ namespace HmsPlugin
                 }
                 initProductDefinitions = products;
 
-                if (clientInited) LoadComsumableProducts(productList);
+                if (clientInited) LoadConsumableProducts(productList);
             }
         }
 
         public List<ProductDefinition> productList = new List<ProductDefinition>();
 
-        public void LoadComsumableProducts(List<ProductDefinition> list)
+        public void LoadConsumableProducts(List<ProductDefinition> list)
         {
             productList = list;
             var consumablesIDs = list.Where(c => c.type == ProductType.Consumable).Select(c => c.storeSpecificId).ToList();
-            CreateProductRequest(consumablesIDs, PriceType.IN_APP_CONSUMABLE, LoadNonComsumableProducts);
+            CreateProductRequest(consumablesIDs, PriceType.IN_APP_CONSUMABLE, LoadNonConsumableProducts);
 
         }
 
-        public void LoadNonComsumableProducts()
+        public void LoadNonConsumableProducts()
         {
             var nonConsumablesIDs = productList.Where(c => c.type == ProductType.NonConsumable).Select(c => c.storeSpecificId).ToList();
             if (nonConsumablesIDs.Count > 0)
