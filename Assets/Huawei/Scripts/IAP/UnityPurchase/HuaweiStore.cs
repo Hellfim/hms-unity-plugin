@@ -27,8 +27,7 @@ namespace HmsPlugin
         }
 
         private System.Object _locker;
-        private List<ProductInfo> _productsList;
-        private Dictionary<String, ProductInfo> _productsByID;
+        private Dictionary<String, ProductInfo> _productsInfo;
         private Dictionary<String, InAppPurchaseData> _purchasedData;
 
         private Boolean _isClientInitialized;
@@ -44,8 +43,7 @@ namespace HmsPlugin
             _storeEvents = callback;
 
             _locker = new System.Object();
-            _productsList = new List<ProductInfo>(100);
-            _productsByID = new Dictionary<String, ProductInfo>(100);
+            _productsInfo = new Dictionary<String, ProductInfo>(100);
             _purchasedData = new Dictionary<String, InAppPurchaseData>(50);
             
             InitializeClient();
@@ -73,13 +71,13 @@ namespace HmsPlugin
 
         void IStore.Purchase(ProductDefinition product, String developerPayload)
         {
-            if (!_productsByID.ContainsKey(product.storeSpecificId))
+            if (!_productsInfo.ContainsKey(product.storeSpecificId))
             {
                 _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.ProductUnavailable, "UnknownProduct"));
                 return;
             }
 
-            var productInfo = _productsByID[product.storeSpecificId];
+            var productInfo = _productsInfo[product.storeSpecificId];
             var purchaseIntentReq = new PurchaseIntentReq
             {
                 PriceType = productInfo.PriceType,
@@ -208,8 +206,7 @@ namespace HmsPlugin
 
             foreach (var productInfo in result.ProductInfoList)
             {
-                _productsList.Add(productInfo);
-                _productsByID.Add(productInfo.ProductId, productInfo);
+                _productsInfo.Add(productInfo.ProductId, productInfo);
             }
         }
 
@@ -256,25 +253,19 @@ namespace HmsPlugin
 
         private void ProductsLoaded()
         {
-            Debug.Log("ProductsLoaded");
+            _storeEvents.OnProductsRetrieved(_productsInfo.Values.Select(GetProductDescriptionFromProductInfo).ToList());
+        }
 
-            var descList = new List<ProductDescription>(_productsList.Count);
+        private ProductDescription GetProductDescriptionFromProductInfo(ProductInfo productInfo)
+        {
+            var price = productInfo.MicrosPrice * 0.000001f;
 
-            foreach (var product in _productsList)
-            {
-                var price = product.MicrosPrice * 0.000001f;
+            var priceString = $"{productInfo.Currency} {(price < 100 ? price.ToString("0.00") : ((Int32)(price + 0.5f)).ToString())}";
+            var metadata = new ProductMetadata(priceString, productInfo.ProductName, productInfo.ProductDesc, productInfo.Currency, (Decimal)price);
 
-                var priceString = price < 100 ? price.ToString("0.00") : ((Int32)(price + 0.5f)).ToString();
-
-                priceString = product.Currency + " " + priceString;
-                var prodMeta = new ProductMetadata(priceString, product.ProductName, product.ProductDesc, product.Currency, (Decimal)price);
-
-                var prodDesc = _purchasedData.TryGetValue(product.ProductId, out var purchaseData) ? new ProductDescription(product.ProductId, prodMeta, CreateReceipt(purchaseData), purchaseData.OrderID) : new ProductDescription(product.ProductId, prodMeta);
-
-                descList.Add(prodDesc);
-            }
-
-            _storeEvents.OnProductsRetrieved(descList);
+            return _purchasedData.TryGetValue(productInfo.ProductId, out var purchaseData)
+                ? new ProductDescription(productInfo.ProductId, metadata, CreateReceipt(purchaseData), purchaseData.OrderID)
+                : new ProductDescription(productInfo.ProductId, metadata);
         }
 
         private static String CreateReceipt(InAppPurchaseData purchaseData)
