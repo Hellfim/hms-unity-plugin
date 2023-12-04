@@ -1,8 +1,8 @@
 {
     "name": "com.hellfim.hms-unity-plugin",
-    "displayName": "HMS-Unity-Plugin",
-    "author": { "name": "EvilMindDevs", "url": "https://github.com/EvilMindDevs" },
-    "version": "2.3.4-repack.0",
+    "displayName": "HMS-Unity-Plugin-RePack",
+    "author": { "name": "EvilMindDevs [Hellfim's repack]", "url": "https://github.com/EvilMindDevs" },
+    "version": "2.3.4-rp0",
     "unity": "2023.2",
-    "description": "Repacked HMS-Unity-Plugin for convenient usage with upm"
+    "description": "A repacked HMS-Unity-Plugin for convenient usage with upm"
 }
