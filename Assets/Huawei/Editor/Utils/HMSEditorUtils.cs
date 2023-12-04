@@ -396,11 +396,7 @@ namespace HmsPlugin
             };
         }
 
-        public static HMSAGConnectConfig GetAGConnectConfig()
-        {
-            var obj = JsonUtility.FromJson<HMSAGConnectConfig>(File.ReadAllText(Application.streamingAssetsPath + "/agconnect-services.json"));
-            return obj;
-        }
+        public static HMSAGConnectConfig GetAGConnectConfig() => JsonUtility.FromJson<HMSAGConnectConfig>(File.ReadAllText(HMSGradlePaths.ConnectServicesFilePath));
 
         [Serializable]
         public class CountryInfo

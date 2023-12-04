@@ -73,24 +73,21 @@ public class HMSGradleFixer : IPostGenerateGradleAndroidProject
             return;
         }
 
-        string fileName = "agconnect-services.json";
-        string filePath = Path.Combine(Application.streamingAssetsPath, fileName);
+        var a = HMSEditorUtils.GetAGConnectConfig();
         string destPath = "";
 #if UNITY_2019_3_OR_NEWER
-        destPath = Path.Combine(Directory.GetParent(path).FullName + Path.DirectorySeparatorChar + "launcher", fileName);
+        destPath = Path.Combine(Directory.GetParent(path).FullName + Path.DirectorySeparatorChar + "launcher", HMSGradlePaths.ConnectServicesFileName);
 
-        string hmsMainTemplatePath = Application.dataPath + "/Huawei/Plugins/Android/hmsMainTemplate.gradle";
-        FileUtil.ReplaceFile(hmsMainTemplatePath, Path.GetFullPath(path) + @"/hmsMainTemplate.gradle");
+        FileUtil.ReplaceFile(HMSGradlePaths.MainTemplateGradle, $"{Path.GetFullPath(path)}/hmsMainTemplate.gradle");
         using (var writer = File.AppendText(Path.GetFullPath(path) + "/build.gradle"))
             writer.WriteLine("\napply from: 'hmsMainTemplate.gradle'");
 
-        string launcherTemplatePath = Application.dataPath + "/Huawei/Plugins/Android/hmsLauncherTemplate.gradle";
-        FileUtil.ReplaceFile(launcherTemplatePath, Directory.GetParent(path).FullName + @"/launcher/hmsLauncherTemplate.gradle");
-        using (var writer = File.AppendText(Directory.GetParent(path).FullName + "/launcher/build.gradle"))
+        var parentDirectoryPath = Directory.GetParent(path).FullName;
+        FileUtil.ReplaceFile(HMSGradlePaths.LauncherTemplateGradle, $"{parentDirectoryPath}/launcher/hmsLauncherTemplate.gradle");
+        using (var writer = File.AppendText($"{parentDirectoryPath}/launcher/build.gradle"))
             writer.WriteLine("\napply from: 'hmsLauncherTemplate.gradle'");
 
-        string baseProjectTemplatePath = Application.dataPath + "/Huawei/Plugins/Android/hmsBaseProjectTemplate.gradle";
-        FileUtil.ReplaceFile(baseProjectTemplatePath, Directory.GetParent(path).FullName + @"/hmsBaseProjectTemplate.gradle");
+        FileUtil.ReplaceFile(HMSGradlePaths.BaseProjectTemplateGradle, $"{parentDirectoryPath}/hmsBaseProjectTemplate.gradle");
 
         //TODO: HMSMainKitsTabFactory.GetEnabledEditors() counts zero sometimes
         // Get enabled Kits and check if they are one of the below, because only them needs to be updated to the latest version.
@@ -150,15 +147,14 @@ public class HMSGradleFixer : IPostGenerateGradleAndroidProject
         }
 
 #elif UNITY_2018_1_OR_NEWER
-        string hmsMainTemplatePath = Application.dataPath + @"/Huawei/Plugins/Android/hmsMainTemplate.gradle";
-        var lines = File.ReadAllLines(hmsMainTemplatePath);
+        var lines = File.ReadAllLines(HMSGradlePaths.MainTemplateGradle);
 
         File.AppendAllLines(path + "/build.gradle", lines);
         GradleVersionFixer(File.ReadAllText(path + "/build.gradle"), path);
-        destPath = Path.Combine(path, fileName);
+        destPath = Path.Combine(path, HMSGradlePaths.ConnectServicesFileName);
 #endif
         if (File.Exists(destPath))
             FileUtil.DeleteFileOrDirectory(destPath);
-        File.Copy(filePath, destPath);
+        File.Copy(HMSGradlePaths.ConnectServicesFilePath, destPath);
     }
 }

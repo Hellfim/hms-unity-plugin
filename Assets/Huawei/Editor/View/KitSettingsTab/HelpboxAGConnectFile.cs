@@ -16,8 +16,8 @@ namespace HmsPlugin
 
         public HelpboxAGConnectFile()
         {
-            _helpBox = new HelpBox.HelpBox("Please import your agconnect-services.json file to StreamingAssets folder", UnityEditor.MessageType.Error);
-            hasAGConnectFile = File.Exists(Application.streamingAssetsPath + "/agconnect-services.json");
+            _helpBox = new HelpBox.HelpBox($"Please import your {HMSGradlePaths.ConnectServicesFileName} file to StreamingAssets folder", UnityEditor.MessageType.Error);
+            hasAGConnectFile = File.Exists(HMSGradlePaths.ConnectServicesFilePath);
         }
 
         public void Draw()

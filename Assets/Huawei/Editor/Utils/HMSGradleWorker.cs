@@ -64,9 +64,18 @@ namespace HmsPlugin
             };
         }
 
+        private static void EnsureGradleBuildPathExists()
+        {
+            var gradleTemplatesPath = Path.GetDirectoryName(HMSGradlePaths.BaseProjectTemplateGradle);
+            if (!String.IsNullOrEmpty(gradleTemplatesPath))
+            {
+                Directory.CreateDirectory(gradleTemplatesPath);
+            }
+        }
+
         private void CreateGradleFiles(string[] gradleConfigs)
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(BaseProjectTemplateGradle));
+            EnsureGradleBuildPathExists();
 #if UNITY_2019_3_OR_NEWER
             CreateMainGradleFile(gradleConfigs);
             CreateLauncherGradleFile(gradleConfigs);
@@ -78,14 +87,10 @@ namespace HmsPlugin
             AssetDatabase.Refresh();
         }
 
-        private static String MainTemplateGradle => Application.dataPath + "/Huawei/Plugins/Android/hmsMainTemplate.gradle";
-        private static String LauncherTemplateGradle => Application.dataPath + "/Huawei/Plugins/Android/hmsLauncherTemplate.gradle";
-        private static String BaseProjectTemplateGradle => Application.dataPath + "/Huawei/Plugins/Android/hmsBaseProjectTemplate.gradle";
-
         private void CreateMainGradleFile(string[] gradleConfigs)
         {
 #if UNITY_2019_3_OR_NEWER
-            using (var file = File.CreateText(MainTemplateGradle))
+            using (var file = File.CreateText(HMSGradlePaths.MainTemplateGradle))
             {
                 file.Write("dependencies {\n\t");
                 for (int i = 0; i < gradleConfigs.Length; i++)
@@ -149,7 +154,7 @@ namespace HmsPlugin
             stringBuilder.AppendLine("\t}");
             stringBuilder.AppendLine("}");
 
-            File.WriteAllText(LauncherTemplateGradle, stringBuilder.ToString());
+            File.WriteAllText(HMSGradlePaths.LauncherTemplateGradle, stringBuilder.ToString());
         }
         private void BaseProjectGradleFile()
         {
@@ -182,7 +187,7 @@ namespace HmsPlugin
             sb.AppendLine("}");      // End of allprojects
 
             // Now we write the constructed string content to the gradle file
-            using (var file = File.CreateText(BaseProjectTemplateGradle))
+            using (var file = File.CreateText(HMSGradlePaths.BaseProjectTemplateGradle))
             {
                 file.Write(sb.ToString());
             }
@@ -230,11 +235,11 @@ namespace HmsPlugin
 
             var packageRoot = HMSEditorUtils.IsAssetPackage ? "Assets" : $"Packages/{HMSEditorUtils.PackageName}";
             var huaweiMobileServicesDLL = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Dlls/HuaweiMobileServices.dll") as PluginImporter;
-            var appDebugAar = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/app-debug.aar") as PluginImporter;
-            var bookInfo = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins//Android/BookInfo.java") as PluginImporter;
-            var objectTypeInfoHelper = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/ObjectTypeInfoHelper.java") as PluginImporter;
-            var pushKitPlugin = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/HMSUnityPushKit.plugin") as PluginImporter;
-            var modeling3dPlugin = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Plugins/Android/HMSUnityModelingKit.plugin") as PluginImporter;
+            var appDebugAar = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/app-debug.aar") as PluginImporter;
+            var bookInfo = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/BookInfo.java") as PluginImporter;
+            var objectTypeInfoHelper = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/ObjectTypeInfoHelper.java") as PluginImporter;
+            var pushKitPlugin = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/HMSUnityPushKit.plugin") as PluginImporter;
+            var modeling3dPlugin = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/HMSUnityModelingKit.plugin") as PluginImporter;
 
             if (pluginEnabled)
                 PrepareGradleFile();
@@ -275,10 +280,11 @@ namespace HmsPlugin
 
         private static void RemoveGradleFiles()
         {
-            AssetDatabase.DeleteAsset(MainTemplateGradle);
-            AssetDatabase.DeleteAsset(LauncherTemplateGradle);
-            AssetDatabase.DeleteAsset(BaseProjectTemplateGradle);
-            AssetDatabase.DeleteAsset("Assets/Huawei/Plugins");
+            AssetDatabase.DeleteAsset(HMSGradlePaths.MainTemplateGradle);
+            AssetDatabase.DeleteAsset(HMSGradlePaths.LauncherTemplateGradle);
+            AssetDatabase.DeleteAsset(HMSGradlePaths.BaseProjectTemplateGradle);
+            
+            AssetDatabase.DeleteAsset(HMSGradlePaths.BuildPluginsRelativePath);
         }
 
         private static void Cleanup()
