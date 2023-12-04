@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace HmsPlugin
 {
-    public class HMSGradleWorker : HMSEditorSingleton<HMSGradleWorker>, IPreprocessBuildWithReport
+    public class HMSGradleWorker : HMSEditorSingleton<HMSGradleWorker>, IPreprocessBuildWithReport, IPostprocessBuildWithReport
     {
         private Dictionary<string, string[]> gradleSettings;
         public int callbackOrder => 0;
@@ -64,9 +64,9 @@ namespace HmsPlugin
             };
         }
 
-
         private void CreateGradleFiles(string[] gradleConfigs)
         {
+            Directory.CreateDirectory(Path.GetDirectoryName(BaseProjectTemplateGradle));
 #if UNITY_2019_3_OR_NEWER
             CreateMainGradleFile(gradleConfigs);
             CreateLauncherGradleFile(gradleConfigs);
@@ -78,10 +78,14 @@ namespace HmsPlugin
             AssetDatabase.Refresh();
         }
 
+        private static String MainTemplateGradle => Application.dataPath + "/Huawei/Plugins/Android/hmsMainTemplate.gradle";
+        private static String LauncherTemplateGradle => Application.dataPath + "/Huawei/Plugins/Android/hmsLauncherTemplate.gradle";
+        private static String BaseProjectTemplateGradle => Application.dataPath + "/Huawei/Plugins/Android/hmsBaseProjectTemplate.gradle";
+
         private void CreateMainGradleFile(string[] gradleConfigs)
         {
 #if UNITY_2019_3_OR_NEWER
-            using (var file = File.CreateText(Application.dataPath + "/Huawei/Plugins/Android/hmsMainTemplate.gradle"))
+            using (var file = File.CreateText(MainTemplateGradle))
             {
                 file.Write("dependencies {\n\t");
                 for (int i = 0; i < gradleConfigs.Length; i++)
@@ -92,7 +96,7 @@ namespace HmsPlugin
             }
 
 #elif UNITY_2018_1_OR_NEWER
-            using (var file = File.CreateText(Application.dataPath + "/Huawei/Plugins/Android/hmsMainTemplate.gradle"))
+            using (var file = File.CreateText(MainTemplateGradle))
             {
                 file.Write("buildscript {\n\t");
                 file.Write("repositories {\n\t\t");
@@ -126,8 +130,6 @@ namespace HmsPlugin
 
         private void CreateLauncherGradleFile(string[] gradleConfigs)
         {
-            var path = Path.Combine(Application.dataPath, "Huawei/Plugins/Android/hmsLauncherTemplate.gradle");
-
             var stringBuilder = new StringBuilder();
             stringBuilder.AppendLine("apply plugin: 'com.huawei.agconnect'\n");
 
@@ -147,13 +149,10 @@ namespace HmsPlugin
             stringBuilder.AppendLine("\t}");
             stringBuilder.AppendLine("}");
 
-            File.WriteAllText(path, stringBuilder.ToString());
+            File.WriteAllText(LauncherTemplateGradle, stringBuilder.ToString());
         }
         private void BaseProjectGradleFile()
         {
-            // Combine paths to get the full file path
-            string filePath = Path.Combine(Application.dataPath + "/Huawei/Plugins/Android/hmsBaseProjectTemplate.gradle");
-
             // Initiate a new StringBuilder object for efficient string concatenations
             StringBuilder sb = new StringBuilder();
 
@@ -183,7 +182,7 @@ namespace HmsPlugin
             sb.AppendLine("}");      // End of allprojects
 
             // Now we write the constructed string content to the gradle file
-            using (var file = File.CreateText(filePath))
+            using (var file = File.CreateText(BaseProjectTemplateGradle))
             {
                 file.Write(sb.ToString());
             }
@@ -210,8 +209,10 @@ namespace HmsPlugin
                     gradle.AddRange(gradleSettings[settings.Keys.ElementAt(i)]);
                 }
             }
+            
             CreateGradleFiles(gradle.ToArray());
         }
+
         private string[] CoreGradles()
         {
             return new string[] { "com.huawei.hms:base:6.6.0.300", "com.huawei.agconnect:agconnect-core:1.6.5.300"};
@@ -219,7 +220,6 @@ namespace HmsPlugin
 
         public void OnPreprocessBuild(BuildReport report)
         {
-            Application.logMessageReceived += OnBuildError;
             bool pluginEnabled = HMSPluginSettings.Instance.Settings.GetBool(PluginToggleEditor.PluginEnabled, true);
             if (report.summary.platform != BuildTarget.Android && pluginEnabled)
             {
@@ -251,18 +251,44 @@ namespace HmsPlugin
                 modeling3dPlugin.SetCompatibleWithPlatform(BuildTarget.Android, HMSMainEditorSettings.Instance.Settings.GetBool(Modeling3dKitToggleEditor.Modeling3dkitEnabled) && pluginEnabled);
             if (appDebugAar != null)
                 appDebugAar.SetCompatibleWithPlatform(BuildTarget.Android, pluginEnabled);
-
-            HMSEditorUtils.HandleAssemblyDefinitions(pluginEnabled);
+            
+            Application.logMessageReceivedThreaded += ApplicationOnLogMessageReceivedThreaded;
         }
 
-        private void OnBuildError(string condition, string stackTrace, LogType type)
+        private static void ApplicationOnLogMessageReceivedThreaded(String condition, String stacktrace, LogType type)
         {
-            if (type == LogType.Error)
+            if (type == LogType.Error || type == LogType.Exception)
             {
-                Application.logMessageReceived -= OnBuildError;
-                HMSEditorUtils.HandleAssemblyDefinitions(false, false);
+                Cleanup();
             }
+        }
+
+        public void OnPostprocessBuild(BuildReport report)
+        {
+            if (!HMSPluginSettings.Instance.Settings.GetBool(PluginToggleEditor.PluginEnabled, true))
+            {
+                return;
+            }
+            
+            Cleanup();
+        }
+
+        private static void RemoveGradleFiles()
+        {
+            File.Delete(MainTemplateGradle);
+            File.Delete($"{MainTemplateGradle}.meta");
+            File.Delete(LauncherTemplateGradle);
+            File.Delete($"{LauncherTemplateGradle}.meta");
+            File.Delete(BaseProjectTemplateGradle);
+            File.Delete($"{BaseProjectTemplateGradle}.meta");
+
+            AssetDatabase.DeleteAsset("Assets/Huawei/Plugins");
+        }
+
+        private static void Cleanup()
+        {
+            Application.logMessageReceivedThreaded -= ApplicationOnLogMessageReceivedThreaded;
+            RemoveGradleFiles();
         }
     }
 }
-
