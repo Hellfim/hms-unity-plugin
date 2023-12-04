@@ -1,6 +1,4 @@
-﻿#if UNITY_PURCHASING
-
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using HuaweiMobileServices.IAP;
 using HuaweiMobileServices.Utils;
@@ -333,5 +331,3 @@ namespace HmsPlugin
 
     }
 }
-
-#endif

@@ -2,9 +2,6 @@
  * Use UnityPurchasing.Initialize(this, ConfigurationBuilder.Instance(HuaweiPurchasingModule.Instance())); 
  * to bind HmsPlugin as store module for builtin purchasing API
  * */
-
-
-#if UNITY_PURCHASING
 using UnityEngine.Purchasing.Extension;
 
 namespace HmsPlugin
@@ -26,4 +23,3 @@ namespace HmsPlugin
         }
     }
 }
-#endif
