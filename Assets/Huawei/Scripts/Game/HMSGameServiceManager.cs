@@ -46,9 +46,9 @@ namespace HmsPlugin
         {
             HuaweiMobileServicesUtil.SetApplication();
             if (HMSGameServiceSettings.Instance.Settings.GetBool(HMSGameServiceSettings.InitializeOnStart))
+            {
                 Init();
-            else
-                Debug.LogWarning("[HMS] initOnStart is disable for GameService. Are you getting init first error? Call HMSGameServiceManager.Instance.Init() by yourself.");
+            }
         }
 
         public void Init()
