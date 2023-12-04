@@ -7,7 +7,6 @@ using UnityEngine.Purchasing;
 using UnityEngine.Purchasing.Extension;
 using System.Linq;
 using System.Text;
-using HuaweiMobileServices.Base;
 using UnityEngine;
 
 namespace HmsPlugin
@@ -103,10 +102,9 @@ namespace HmsPlugin
                     PurchaseToken = token,
                 };
 
-                var task = _iapClient.ConsumeOwnedPurchase(request);
-                task.AddOnSuccessListener(_ => { _purchasedData.Remove(product.storeSpecificId); });
-
-                task.AddOnFailureListener(exception => { Debug.Log("Consume failed " + exception.Message + " " + exception.StackTrace); });
+                _iapClient.ConsumeOwnedPurchase(request)
+                          .AddOnSuccessListener(_ => { _purchasedData.Remove(product.storeSpecificId); })
+                          .AddOnFailureListener(exception => { Debug.Log("Consume failed " + exception.Message + " " + exception.StackTrace); });
             }
         }
 
@@ -115,7 +113,9 @@ namespace HmsPlugin
             _iapClient = Iap.GetIapClient();
             Debug.Log("[HuaweiStore] IAP Client Created");
 
-            _iapClient.EnvReady.AddOnSuccessListener(ProcessInitializationSuccess).AddOnFailureListener(ProcessInitializationFailure);
+            _iapClient.EnvReady
+                      .AddOnSuccessListener(ProcessInitializationSuccess)
+                      .AddOnFailureListener(ProcessInitializationFailure);
         }
 
         private void ProcessInitializationSuccess(EnvReadyResult result)
@@ -178,13 +178,9 @@ namespace HmsPlugin
                 ProductIds = consumablesIDs,
             };
 
-            var task = _iapClient.ObtainProductInfo(productsDataRequest);
-            task.AddOnFailureListener(GetProductsFailure);
-            task.AddOnSuccessListener(result =>
-            {
-                ParseProducts(result, type);
-                onSuccess();
-            });
+            _iapClient.ObtainProductInfo(productsDataRequest)
+                      .AddOnFailureListener(GetProductsFailure)
+                      .AddOnSuccessListener(result => { ParseProducts(result, type); onSuccess(); });
         }
 
         private void GetProductsFailure(HMSException exception)
@@ -239,11 +235,8 @@ namespace HmsPlugin
                 PriceType = type,
             };
 
-            _iapClient.ObtainOwnedPurchases(ownedPurchasesReq).AddOnSuccessListener(result =>
-            {
-                ParseOwned(result);
-                onSuccess();
-            });
+            _iapClient.ObtainOwnedPurchases(ownedPurchasesReq)
+                      .AddOnSuccessListener(result => { ParseOwned(result); onSuccess(); });
         }
 
         private void ParseOwned(OwnedPurchasesResult result)
