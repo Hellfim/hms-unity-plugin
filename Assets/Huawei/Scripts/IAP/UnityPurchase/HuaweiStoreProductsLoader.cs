@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Text;
 using HuaweiMobileServices.IAP;
 using HuaweiMobileServices.Utils;
 using UnityEngine;
@@ -19,19 +20,16 @@ namespace HmsPlugin
         private readonly Dictionary<String, ProductInfo> _productsInfo;
         private readonly Dictionary<String, InAppPurchaseData> _purchasedData;
         private readonly ReadOnlyCollection<ProductDefinition> _productDefinitions;
-
-        private readonly Action _onProductsLoadedCallback;
-
+        
         private Int32 _currentProductTypeIndex;
 
-        public HuaweiStoreProductsLoader(IIapClient iapClient, IStoreCallback storeEvents, Dictionary<String, ProductInfo> productsInfo, Dictionary<String, InAppPurchaseData> purchasedData, ReadOnlyCollection<ProductDefinition> productDefinitions, Action onProductsLoadedCallback)
+        public HuaweiStoreProductsLoader(IIapClient iapClient, IStoreCallback storeEvents, Dictionary<String, ProductInfo> productsInfo, Dictionary<String, InAppPurchaseData> purchasedData, ReadOnlyCollection<ProductDefinition> productDefinitions)
         {
             _iapClient = iapClient;
             _storeEvents = storeEvents;
             _productsInfo = productsInfo;
             _purchasedData = purchasedData;
             _productDefinitions = productDefinitions;
-            _onProductsLoadedCallback = onProductsLoadedCallback;
         }
 
         public void Start()
@@ -91,10 +89,32 @@ namespace HmsPlugin
             }
             else
             {
-                _onProductsLoadedCallback();
+                _storeEvents.OnProductsRetrieved(_productsInfo.Values.Select(GetProductDescriptionFromProductInfo).ToList());
             }
         }
+        
+        private ProductDescription GetProductDescriptionFromProductInfo(ProductInfo productInfo)
+        {
+            var price = productInfo.MicrosPrice * 0.000001f;
 
+            var priceString = $"{productInfo.Currency} {(price < 100 ? price.ToString("0.00") : ((Int32)(price + 0.5f)).ToString())}";
+            var metadata = new ProductMetadata(priceString, productInfo.ProductName, productInfo.ProductDesc, productInfo.Currency, (Decimal)price);
+
+            return _purchasedData.TryGetValue(productInfo.ProductId, out var purchaseData)
+                ? new ProductDescription(productInfo.ProductId, metadata, CreateReceipt(purchaseData), purchaseData.OrderID)
+                : new ProductDescription(productInfo.ProductId, metadata);
+        }
+        
+        private static String CreateReceipt(InAppPurchaseData purchaseData)
+        {
+            var sb = new StringBuilder(1024);
+            sb.Append('{').Append("\"Store\":\"AppGallery\",\"TransactionID\":\"").Append(purchaseData.OrderID).Append("\", \"Payload\":{ ");
+            sb.Append("\"product\":\"").Append(purchaseData.ProductId).Append("\"");
+            sb.Append('}');
+            sb.Append('}');
+            return sb.ToString();
+        }
+        
         private void RequestProductsInfo(IList<String> consumablesIDs, PriceType type)
         {
             var productsDataRequest = new ProductInfoReq
