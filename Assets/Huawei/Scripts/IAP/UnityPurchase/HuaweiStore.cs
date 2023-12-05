@@ -34,6 +34,7 @@ namespace HmsPlugin
         private Boolean _isClientInitialized;
         private IIapClient _iapClient;
         private IStoreCallback _storeEvents;
+        private HuaweiStoreProductsLoader _productsLoader;
         
         void IStore.Initialize(IStoreCallback callback)
         {
@@ -128,76 +129,33 @@ namespace HmsPlugin
             {
                 return;
             }
-            
-            LoadConsumableProducts();
+
+            _productsLoader = new HuaweiStoreProductsLoader(_iapClient, _storeEvents, _productsInfo, _productDefinitions, ProductsLoaded);
+            _productsLoader.Start();
         }
         
-        private void LoadConsumableProducts()
+        private ProductDescription GetProductDescriptionFromProductInfo(ProductInfo productInfo)
         {
-            var consumablesIDs = _productDefinitions.Where(c => c.type == ProductType.Consumable).Select(c => c.storeSpecificId).ToList();
-            CreateProductRequest(consumablesIDs, PriceType.IN_APP_CONSUMABLE, LoadNonConsumableProducts);
-        }
+            var price = productInfo.MicrosPrice * 0.000001f;
 
-        private void LoadNonConsumableProducts()
+            var priceString = $"{productInfo.Currency} {(price < 100 ? price.ToString("0.00") : ((Int32)(price + 0.5f)).ToString())}";
+            var metadata = new ProductMetadata(priceString, productInfo.ProductName, productInfo.ProductDesc, productInfo.Currency, (Decimal)price);
+
+            return _purchasedData.TryGetValue(productInfo.ProductId, out var purchaseData)
+                ? new ProductDescription(productInfo.ProductId, metadata, CreateReceipt(purchaseData), purchaseData.OrderID)
+                : new ProductDescription(productInfo.ProductId, metadata);
+        }
+        
+        private static String CreateReceipt(InAppPurchaseData purchaseData)
         {
-            var nonConsumablesIDs = _productDefinitions.Where(c => c.type == ProductType.NonConsumable).Select(c => c.storeSpecificId).ToList();
-            if (nonConsumablesIDs.Count > 0)
-            {
-                CreateProductRequest(nonConsumablesIDs, PriceType.IN_APP_NONCONSUMABLE, LoadSubscribeProducts);
-            }
-            else
-            {
-                LoadSubscribeProducts();
-            }
+            var sb = new StringBuilder(1024);
+            sb.Append('{').Append("\"Store\":\"AppGallery\",\"TransactionID\":\"").Append(purchaseData.OrderID).Append("\", \"Payload\":{ ");
+            sb.Append("\"product\":\"").Append(purchaseData.ProductId).Append("\"");
+            sb.Append('}');
+            sb.Append('}');
+            return sb.ToString();
         }
-
-        private void LoadSubscribeProducts()
-        {
-            var subscribeIDs = _productDefinitions.Where(c => c.type == ProductType.Subscription).Select(c => c.storeSpecificId).ToList();
-            if (subscribeIDs.Count > 0)
-            {
-                CreateProductRequest(subscribeIDs, PriceType.IN_APP_SUBSCRIPTION, ProductsLoaded);
-            }
-            else
-            {
-                ProductsLoaded();
-            }
-        }
-
-        private void CreateProductRequest(IList<String> consumablesIDs, PriceType type, Action onSuccess)
-        {
-            var productsDataRequest = new ProductInfoReq
-            {
-                PriceType = type,
-                ProductIds = consumablesIDs,
-            };
-
-            _iapClient.ObtainProductInfo(productsDataRequest)
-                      .AddOnFailureListener(GetProductsFailure)
-                      .AddOnSuccessListener(result => { ProcessLoadedProductInfos(result); onSuccess(); });
-        }
-
-        private void GetProductsFailure(HMSException exception)
-        {
-            Debug.LogError("[HuaweiStore]: ERROR on GetProductsFailure: " + exception.WrappedCauseMessage + " " + exception.WrappedExceptionMessage);
-            _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
-        }
-
-        private void ProcessLoadedProductInfos(ProductInfoResult result)
-        {
-            if (result == null || result.ProductInfoList.Count == 0)
-            {
-                return;
-            }
-
-            Debug.Log($"[HuaweiStore] Loaded product infos:\n{String.Join("Product Id: \n", result.ProductInfoList.Select(productInfo => productInfo.ProductId))}");
-
-            foreach (var productInfo in result.ProductInfoList)
-            {
-                _productsInfo.Add(productInfo.ProductId, productInfo);
-            }
-        }
-
+        
         private void LoadOwnedConsumables()
         {
             CreateOwnedPurchaseRequest(PriceType.IN_APP_CONSUMABLE, LoadOwnedNonConsumables);
@@ -243,29 +201,7 @@ namespace HmsPlugin
         {
             _storeEvents.OnProductsRetrieved(_productsInfo.Values.Select(GetProductDescriptionFromProductInfo).ToList());
         }
-
-        private ProductDescription GetProductDescriptionFromProductInfo(ProductInfo productInfo)
-        {
-            var price = productInfo.MicrosPrice * 0.000001f;
-
-            var priceString = $"{productInfo.Currency} {(price < 100 ? price.ToString("0.00") : ((Int32)(price + 0.5f)).ToString())}";
-            var metadata = new ProductMetadata(priceString, productInfo.ProductName, productInfo.ProductDesc, productInfo.Currency, (Decimal)price);
-
-            return _purchasedData.TryGetValue(productInfo.ProductId, out var purchaseData)
-                ? new ProductDescription(productInfo.ProductId, metadata, CreateReceipt(purchaseData), purchaseData.OrderID)
-                : new ProductDescription(productInfo.ProductId, metadata);
-        }
-
-        private static String CreateReceipt(InAppPurchaseData purchaseData)
-        {
-            var sb = new StringBuilder(1024);
-            sb.Append('{').Append("\"Store\":\"AppGallery\",\"TransactionID\":\"").Append(purchaseData.OrderID).Append("\", \"Payload\":{ ");
-            sb.Append("\"product\":\"").Append(purchaseData.ProductId).Append("\"");
-            sb.Append('}');
-            sb.Append('}');
-            return sb.ToString();
-        }
-
+        
         private void PurchaseIntentCreated(PurchaseIntentResult intentResult, ProductDefinition product)
         {
             if (intentResult == null)
