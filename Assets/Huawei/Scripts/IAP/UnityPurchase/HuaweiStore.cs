@@ -75,7 +75,7 @@ namespace HmsPlugin
             };
 
             _iapClient.CreatePurchaseIntent(purchaseIntentReq)
-                      .AddOnSuccessListener(intentResult => { PurchaseIntentCreated(intentResult, product); })
+                      .AddOnSuccessListener(intentResult => { ProcessPurchaseIntent(intentResult, product); })
                       .AddOnFailureListener(exception => { _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message)); });
         }
 
@@ -133,7 +133,7 @@ namespace HmsPlugin
             _productsLoader.Start();
         }
         
-        private void PurchaseIntentCreated(PurchaseIntentResult intentResult, ProductDefinition product)
+        private void ProcessPurchaseIntent(PurchaseIntentResult intentResult, ProductDefinition product)
         {
             if (intentResult == null)
             {
