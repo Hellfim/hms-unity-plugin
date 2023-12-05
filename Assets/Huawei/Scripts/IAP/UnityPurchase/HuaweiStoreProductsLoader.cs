@@ -22,7 +22,7 @@ namespace HmsPlugin
 
         private readonly Action _onProductsLoadedCallback;
 
-        private Int32 _currentLoadableProductIndex;
+        private Int32 _currentProductTypeIndex;
 
         public HuaweiStoreProductsLoader(IIapClient iapClient, IStoreCallback storeEvents, Dictionary<String, ProductInfo> productsInfo, Dictionary<String, InAppPurchaseData> purchasedData, ReadOnlyCollection<ProductDefinition> productDefinitions, Action onProductsLoadedCallback)
         {
@@ -36,8 +36,8 @@ namespace HmsPlugin
 
         public void Start()
         {
-            _currentLoadableProductIndex = 0;
-            LoadProductsByType(_productTypes[_currentLoadableProductIndex]);
+            _currentProductTypeIndex = 0;
+            LoadProductTypeData(_productTypes[_currentProductTypeIndex]);
         }
 
         private static PriceType GetHuaweiProductType(ProductType productType)
@@ -51,21 +51,21 @@ namespace HmsPlugin
             };
         }
         
-        private void LoadProductsByType(ProductType productType)
+        private void LoadProductTypeData(ProductType productType)
         {
             var huaweiProductType = GetHuaweiProductType(productType);
             var productTypeIds = _productDefinitions.Where(c => c.type == productType).Select(c => c.storeSpecificId).ToList();
             if (productTypeIds.Count > 0)
             {
-                CreateProductRequest(productTypeIds, huaweiProductType);
+                RequestProductsInfo(productTypeIds, huaweiProductType);
             }
             else
             {
-                FinishProductLoading();
+                FinishCurrentProductTypeDataLoading();
             }
         }
 
-        private void ProcessLoadedProducts(ProductInfoResult result)
+        private void ProcessProductInfos(ProductInfoResult result)
         {
             if (result == null)
             {
@@ -79,15 +79,15 @@ namespace HmsPlugin
                 _productsInfo.Add(productInfo.ProductId, productInfo);
             }
 
-            LoadOwnedProductsByType(_productTypes[_currentLoadableProductIndex]);
+            LoadCurrentProductTypePurchasesData(_productTypes[_currentProductTypeIndex]);
         }
 
-        private void FinishProductLoading()
+        private void FinishCurrentProductTypeDataLoading()
         {
-            _currentLoadableProductIndex++;
-            if (_currentLoadableProductIndex < _productTypes.Length)
+            _currentProductTypeIndex++;
+            if (_currentProductTypeIndex < _productTypes.Length)
             {
-                LoadProductsByType(_productTypes[_currentLoadableProductIndex]);
+                LoadProductTypeData(_productTypes[_currentProductTypeIndex]);
             }
             else
             {
@@ -95,7 +95,7 @@ namespace HmsPlugin
             }
         }
 
-        private void CreateProductRequest(IList<String> consumablesIDs, PriceType type)
+        private void RequestProductsInfo(IList<String> consumablesIDs, PriceType type)
         {
             var productsDataRequest = new ProductInfoReq
             {
@@ -105,21 +105,21 @@ namespace HmsPlugin
 
             _iapClient.ObtainProductInfo(productsDataRequest)
                       .AddOnFailureListener(GetProductsFailure)
-                      .AddOnSuccessListener(ProcessLoadedProducts);
+                      .AddOnSuccessListener(ProcessProductInfos);
         }
 
         private void GetProductsFailure(HMSException exception)
         {
             Debug.LogError($"[HuaweiStore]: ERROR on GetProductsFailure: {exception.WrappedCauseMessage} | {exception.WrappedExceptionMessage}");
-            _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
-        }
-        
-        private void LoadOwnedProductsByType(ProductType productType)
-        {
-            CreateOwnedPurchaseRequest(GetHuaweiProductType(productType));
+            _storeEvents.OnSetupFailed(InitializationFailureReason.NoProductsAvailable);
         }
 
-        private void CreateOwnedPurchaseRequest(PriceType type)
+        private void LoadCurrentProductTypePurchasesData(ProductType productType)
+        {
+            RequestProductTypePurchasesData(GetHuaweiProductType(productType));
+        }
+
+        private void RequestProductTypePurchasesData(PriceType type)
         {
             var ownedPurchasesReq = new OwnedPurchasesReq
             {
@@ -127,10 +127,10 @@ namespace HmsPlugin
             };
 
             _iapClient.ObtainOwnedPurchases(ownedPurchasesReq)
-                      .AddOnSuccessListener(ProcessLoadedOwnedProducts);
+                      .AddOnSuccessListener(ProcessPurchasesData);
         }
 
-        private void ProcessLoadedOwnedProducts(OwnedPurchasesResult result)
+        private void ProcessPurchasesData(OwnedPurchasesResult result)
         {
             if (result is { InAppPurchaseDataList: not null })
             {
@@ -142,7 +142,7 @@ namespace HmsPlugin
                 }
             }
             
-            FinishProductLoading();
+            FinishCurrentProductTypeDataLoading();
         }
     }
 }
