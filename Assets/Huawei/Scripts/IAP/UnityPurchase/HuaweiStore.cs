@@ -60,23 +60,26 @@ namespace HmsPlugin
 
         void IStore.Purchase(ProductDefinition product, String developerPayload)
         {
-            if (!_productsInfo.ContainsKey(product.storeSpecificId))
+            lock (_locker)
             {
-                _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.ProductUnavailable, "UnknownProduct"));
-                return;
+                if (!_productsInfo.ContainsKey(product.storeSpecificId))
+                {
+                    _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.ProductUnavailable, "UnknownProduct"));
+                    return;
+                }
+
+                var productInfo = _productsInfo[product.storeSpecificId];
+                var purchaseIntentReq = new PurchaseIntentReq
+                {
+                    PriceType = productInfo.PriceType,
+                    ProductId = productInfo.ProductId,
+                    DeveloperPayload = developerPayload,
+                };
+
+                _iapClient.CreatePurchaseIntent(purchaseIntentReq)
+                          .AddOnSuccessListener(intentResult => { ProcessPurchaseIntent(intentResult, product); })
+                          .AddOnFailureListener(exception => { _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message)); });
             }
-
-            var productInfo = _productsInfo[product.storeSpecificId];
-            var purchaseIntentReq = new PurchaseIntentReq
-            {
-                PriceType = productInfo.PriceType,
-                ProductId = productInfo.ProductId,
-                DeveloperPayload = developerPayload
-            };
-
-            _iapClient.CreatePurchaseIntent(purchaseIntentReq)
-                      .AddOnSuccessListener(intentResult => { ProcessPurchaseIntent(intentResult, product); })
-                      .AddOnFailureListener(exception => { _storeEvents.OnPurchaseFailed(new PurchaseFailureDescription(product.id, PurchaseFailureReason.Unknown, exception.Message)); });
         }
 
         void IStore.FinishTransaction(ProductDefinition product, String transactionId)
