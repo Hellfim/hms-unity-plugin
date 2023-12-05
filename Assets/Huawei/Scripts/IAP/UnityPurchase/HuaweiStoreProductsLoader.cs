@@ -130,8 +130,7 @@ namespace HmsPlugin
 
         private void ProcessProductInfoLoadingFailure(HMSException exception)
         {
-            Debug.LogError($"[HuaweiStore]: ERROR on RequestProductsInfo: {exception.WrappedCauseMessage} | {exception.WrappedExceptionMessage}");
-            _storeEvents.OnSetupFailed(InitializationFailureReason.NoProductsAvailable);
+            _storeEvents.OnSetupFailed(InitializationFailureReason.NoProductsAvailable, $"{exception.WrappedCauseMessage} | {exception.WrappedExceptionMessage}");
         }
 
         private void RequestProductTypePurchasesData(PriceType type)

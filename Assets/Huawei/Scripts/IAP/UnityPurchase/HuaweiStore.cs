@@ -118,8 +118,7 @@ namespace HmsPlugin
 
         private void ProcessInitializationFailure(HMSException exception)
         {
-            Debug.LogError("[HuaweiStore]: ERROR on ClientInitFailed: " + exception.WrappedCauseMessage + " " + exception.WrappedExceptionMessage);
-            _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
+            _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable, $"{exception.WrappedCauseMessage} | {exception.WrappedExceptionMessage}");
         }
 
         private void LoadProducts()
