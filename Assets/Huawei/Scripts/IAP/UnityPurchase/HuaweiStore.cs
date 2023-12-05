@@ -130,7 +130,7 @@ namespace HmsPlugin
                 return;
             }
 
-            _productsLoader = new HuaweiStoreProductsLoader(_iapClient, _storeEvents, _productsInfo, _productDefinitions, ProductsLoaded);
+            _productsLoader = new HuaweiStoreProductsLoader(_iapClient, _storeEvents, _productsInfo, _purchasedData, _productDefinitions, ProductsLoaded);
             _productsLoader.Start();
         }
         
@@ -154,47 +154,6 @@ namespace HmsPlugin
             sb.Append('}');
             sb.Append('}');
             return sb.ToString();
-        }
-        
-        private void LoadOwnedConsumables()
-        {
-            CreateOwnedPurchaseRequest(PriceType.IN_APP_CONSUMABLE, LoadOwnedNonConsumables);
-        }
-
-        private void LoadOwnedNonConsumables()
-        {
-            CreateOwnedPurchaseRequest(PriceType.IN_APP_NONCONSUMABLE, LoadOwnedSubscribes);
-        }
-
-        private void LoadOwnedSubscribes()
-        {
-            CreateOwnedPurchaseRequest(PriceType.IN_APP_SUBSCRIPTION, ProductsLoaded);
-        }
-
-        private void CreateOwnedPurchaseRequest(PriceType type, Action onSuccess)
-        {
-            var ownedPurchasesReq = new OwnedPurchasesReq
-            {
-                PriceType = type,
-            };
-
-            _iapClient.ObtainOwnedPurchases(ownedPurchasesReq)
-                      .AddOnSuccessListener(result => { ParseOwned(result); onSuccess(); });
-        }
-
-        private void ParseOwned(OwnedPurchasesResult result)
-        {
-            if (result == null || result.InAppPurchaseDataList == null)
-            {
-                return;
-            }
-
-            foreach (var inAppPurchaseData in result.InAppPurchaseDataList)
-            {
-                _purchasedData[inAppPurchaseData.ProductId] = inAppPurchaseData;
-
-                Debug.Log("ProductId: " + inAppPurchaseData.ProductId + " , ProductName: " + inAppPurchaseData.ProductName);
-            }
         }
 
         private void ProductsLoaded()
