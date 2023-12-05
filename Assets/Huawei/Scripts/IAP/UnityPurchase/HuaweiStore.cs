@@ -54,7 +54,7 @@ namespace HmsPlugin
 
                 _productDefinitions = products;
 
-                LoadProductsInfos();
+                LoadProducts();
             }
         }
 
@@ -112,7 +112,7 @@ namespace HmsPlugin
             {
                 _isClientInitialized = true;
                 
-                LoadProductsInfos();
+                LoadProducts();
             }
         }
 
@@ -122,9 +122,9 @@ namespace HmsPlugin
             _storeEvents.OnSetupFailed(InitializationFailureReason.PurchasingUnavailable);
         }
 
-        private void LoadProductsInfos()
+        private void LoadProducts()
         {
-            if (!_isClientInitialized || _productDefinitions == null)
+            if (!_isClientInitialized || _productDefinitions == null || _productsLoader != null)
             {
                 return;
             }

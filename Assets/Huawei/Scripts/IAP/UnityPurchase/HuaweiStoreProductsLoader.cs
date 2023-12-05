@@ -45,7 +45,7 @@ namespace HmsPlugin
                 ProductType.Consumable => PriceType.IN_APP_CONSUMABLE,
                 ProductType.NonConsumable => PriceType.IN_APP_NONCONSUMABLE,
                 ProductType.Subscription => PriceType.IN_APP_SUBSCRIPTION,
-                _ => throw new ArgumentOutOfRangeException(nameof(productType), productType, null)
+                _ => throw new ArgumentOutOfRangeException(nameof(productType), productType, null),
             };
         }
         
@@ -61,23 +61,6 @@ namespace HmsPlugin
             {
                 FinishCurrentProductTypeDataLoading();
             }
-        }
-
-        private void ProcessProductInfos(ProductInfoResult result)
-        {
-            if (result == null)
-            {
-                return;
-            }
-
-            Debug.Log($"[HuaweiStore] Loaded product infos:\n{String.Join("Product Id: \n", result.ProductInfoList.Select(productInfo => productInfo.ProductId))}");
-
-            foreach (var productInfo in result.ProductInfoList)
-            {
-                _productsInfo.Add(productInfo.ProductId, productInfo);
-            }
-
-            LoadCurrentProductTypePurchasesData(_productTypes[_currentProductTypeIndex]);
         }
 
         private void FinishCurrentProductTypeDataLoading()
@@ -124,19 +107,31 @@ namespace HmsPlugin
             };
 
             _iapClient.ObtainProductInfo(productsDataRequest)
-                      .AddOnFailureListener(GetProductsFailure)
-                      .AddOnSuccessListener(ProcessProductInfos);
+                      .AddOnFailureListener(ProcessProductInfoLoadingFailure)
+                      .AddOnSuccessListener(ProcessProductsInfo);
         }
 
-        private void GetProductsFailure(HMSException exception)
+        private void ProcessProductsInfo(ProductInfoResult result)
         {
-            Debug.LogError($"[HuaweiStore]: ERROR on GetProductsFailure: {exception.WrappedCauseMessage} | {exception.WrappedExceptionMessage}");
+            if (result == null)
+            {
+                return;
+            }
+
+            Debug.Log($"[HuaweiStore] Loaded product infos:\n{String.Join("Product Id: \n", result.ProductInfoList.Select(productInfo => productInfo.ProductId))}");
+
+            foreach (var productInfo in result.ProductInfoList)
+            {
+                _productsInfo.Add(productInfo.ProductId, productInfo);
+            }
+
+            RequestProductTypePurchasesData(GetHuaweiProductType(_productTypes[_currentProductTypeIndex]));
+        }
+
+        private void ProcessProductInfoLoadingFailure(HMSException exception)
+        {
+            Debug.LogError($"[HuaweiStore]: ERROR on RequestProductsInfo: {exception.WrappedCauseMessage} | {exception.WrappedExceptionMessage}");
             _storeEvents.OnSetupFailed(InitializationFailureReason.NoProductsAvailable);
-        }
-
-        private void LoadCurrentProductTypePurchasesData(ProductType productType)
-        {
-            RequestProductTypePurchasesData(GetHuaweiProductType(productType));
         }
 
         private void RequestProductTypePurchasesData(PriceType type)
