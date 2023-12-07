@@ -16,7 +16,7 @@ internal class HMSConnectAPITabFactory
 
     static HMSConnectAPITabFactory()
     {
-        versionInfo = File.ReadAllText(Application.dataPath + "/Huawei/VERSION");
+        versionInfo = File.ReadAllText(HMSEditorUtils.GetAbsolutePackageRootPath() + "/Huawei/VERSION");
     }
 
     public static TabView CreateConnectAPITab(TabBar tabBar)

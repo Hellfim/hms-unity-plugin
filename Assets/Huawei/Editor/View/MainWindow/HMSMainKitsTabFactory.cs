@@ -25,7 +25,7 @@ internal class HMSMainKitsTabFactory
 
     static HMSMainKitsTabFactory()
     {
-        versionInfo = File.ReadAllText(Application.dataPath + "/Huawei/VERSION");
+        versionInfo = File.ReadAllText(HMSEditorUtils.GetAbsolutePackageRootPath() + "/Huawei/VERSION");
         toggleEditors = new List<ToggleEditor>();
     }
 

@@ -9,9 +9,18 @@ namespace HmsPlugin
 {
     public static class HMSEditorUtils
     {
-        public const String PackageName = "com.hellfim.hms-unity-plugin";
+        private const String PackageName = "com.hellfim.hms-unity-plugin";
+        private static Boolean IsAssetPackage => UnityEditor.PackageManager.PackageInfo.FindForAssembly(System.Reflection.Assembly.GetExecutingAssembly()) == null;
 
-        public static Boolean IsAssetPackage => UnityEditor.PackageManager.PackageInfo.FindForAssembly(System.Reflection.Assembly.GetExecutingAssembly()) == null;
+        public static String GetAbsolutePackageRootPath()
+        {
+            return IsAssetPackage ? Application.dataPath : GetLibraryPackagePath(PackageName);
+        }
+
+        public static String GetRelativePackageRootPath()
+        {
+            return IsAssetPackage ? "Assets" : $"Packages/{PackageName}";
+        }
 
         private static String GetLibraryPackagePath(String packageName)
         {
@@ -22,11 +31,10 @@ namespace HmsPlugin
             
             return packageLibraryPath;
         }
-        
+
         public static void HandleAssemblyDefinitions(bool enable, bool refreshAssets = true)
         {
-            var packageRootAbsolutePath = IsAssetPackage ? Application.dataPath : GetLibraryPackagePath(PackageName);
-            string huaweiMobileServicesCorePath = $"{packageRootAbsolutePath}/Huawei/HuaweiMobileServices.Core.asmdef";
+            string huaweiMobileServicesCorePath = $"{GetAbsolutePackageRootPath()}/Huawei/HuaweiMobileServices.Core.asmdef";
             var huaweiMobileServicesCore = JsonUtility.FromJson<AssemblyDefinitionInfo>(File.ReadAllText(huaweiMobileServicesCorePath));
 
             if (huaweiMobileServicesCore != null)

@@ -233,7 +233,7 @@ namespace HmsPlugin
                 pluginEnabled = false;
             }
 
-            var packageRoot = HMSEditorUtils.IsAssetPackage ? "Assets" : $"Packages/{HMSEditorUtils.PackageName}";
+            var packageRoot = HMSEditorUtils.GetRelativePackageRootPath();
             var huaweiMobileServicesDLL = AssetImporter.GetAtPath($"{packageRoot}/Huawei/Dlls/HuaweiMobileServices.dll") as PluginImporter;
             var appDebugAar = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/app-debug.aar") as PluginImporter;
             var bookInfo = AssetImporter.GetAtPath($"{packageRoot}/{HMSGradlePaths.AndroidPluginsInternalPath}/BookInfo.java") as PluginImporter;

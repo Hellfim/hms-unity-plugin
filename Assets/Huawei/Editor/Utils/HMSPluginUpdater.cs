@@ -77,7 +77,7 @@ public class HMSPluginUpdateRequest : MonoBehaviour
 
         var json = JsonUtility.FromJson<TagList>("{\"tags\":" + request.downloadHandler.text + "}");
         string latestVersionString = FindtheLatestVersion(json);
-        string currentVersionString = File.ReadAllText(Application.dataPath + "/Huawei/VERSION");
+        string currentVersionString = File.ReadAllText(HMSEditorUtils.GetAbsolutePackageRootPath() + "/Huawei/VERSION");
 
         if (Int64.Parse(latestVersionString.Replace(".", "0").PadRight(8, '0')) > Int64.Parse(currentVersionString.Replace(".", "0").PadRight(8, '0')))
         {

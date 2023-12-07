@@ -23,7 +23,7 @@ namespace HmsPlugin
                 "Assets/Huawei/Resources",
                 "Assets/StreamingAssets"
             };
-            AssetDatabase.ExportPackage(hmsFileNames, Application.dataPath + "/HMSUnityPackageV2.unitypackage", ExportPackageOptions.Recurse | ExportPackageOptions.Interactive);
+            AssetDatabase.ExportPackage(hmsFileNames, HMSEditorUtils.GetAbsolutePackageRootPath() + "/HMSUnityPackageV2.unitypackage", ExportPackageOptions.Recurse | ExportPackageOptions.Interactive);
         }
     }
 }
