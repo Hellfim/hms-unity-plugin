@@ -257,6 +257,8 @@ namespace HmsPlugin
             if (appDebugAar != null)
                 appDebugAar.SetCompatibleWithPlatform(BuildTarget.Android, pluginEnabled);
             
+            HMSEditorUtils.HandleAssemblyDefinitions(pluginEnabled);
+            
             Application.logMessageReceivedThreaded += ApplicationOnLogMessageReceivedThreaded;
         }
 
